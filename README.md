@@ -2,6 +2,8 @@
 
 Automatically rename focused Herdr tabs with short dash-case names from pane context. It uses an OpenAI-compatible local LLM and is inspired by `tmux-ai-window-name`.
 
+![](.github/screenshot_001.png)
+
 ## What it does
 
 - Runs only when a tab receives focus, or when the `refresh` plugin action is invoked.
