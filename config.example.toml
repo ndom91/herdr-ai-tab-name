@@ -1,0 +1,8 @@
+[llm]
+# Any OpenAI-compatible chat-completions endpoint.
+url = "https://llama-dash.puff.lan/v1/chat/completions"
+model = "gemma-4-26B-A4B-it"
+# ssl_verify = "/path/to/custom-ca.pem"
+
+[rename]
+max_lines_per_pane = 40
