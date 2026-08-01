@@ -6,3 +6,6 @@ model = "gemma-4-26B-A4B-it"
 
 [rename]
 max_lines_per_pane = 40
+# Optional title limits; leave commented out to keep them unset.
+# max_title_chars = 32
+# max_title_words = 3

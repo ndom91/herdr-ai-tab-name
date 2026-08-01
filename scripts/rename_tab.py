@@ -157,6 +157,19 @@ def pane_content(panes: list[dict], line_count: int) -> str:
     return "\n---\n".join(parts)
 
 
+def title_prompt(config: dict) -> str:
+    rename = config.get("rename", {})
+    prompt = DEFAULT_PROMPT
+    if (max_chars := rename.get("max_title_chars")) is not None:
+        prompt += f" Keep the title to at most {max_chars} characters."
+    if (max_words := rename.get("max_title_words")) is not None:
+        prompt += (
+            f" Aim for at most {max_words} words; hyphen-separated title parts count as words "
+            "(for example, refactor-react-effect is 3 words)."
+        )
+    return prompt
+
+
 def generate_title(content: str, config: dict) -> str:
     llm = config["llm"]
     key = api_key(config)
@@ -164,7 +177,7 @@ def generate_title(content: str, config: dict) -> str:
         {
             "model": llm["model"],
             "messages": [
-                {"role": "system", "content": DEFAULT_PROMPT},
+                {"role": "system", "content": title_prompt(config)},
                 {"role": "user", "content": content},
             ],
             "temperature": 0.3,
@@ -190,6 +203,12 @@ def normalize(title: str) -> str:
     if not words:
         raise RuntimeError("LLM returned no kebab-case title")
     return "-".join(words[:4])
+
+
+def trim_title(title: str, max_chars: int | None) -> str:
+    if max_chars is None:
+        return title
+    return title[:max_chars].rstrip("-")
 
 
 def cache_path(tab_id: str) -> Path:
@@ -230,6 +249,11 @@ def rename(force: bool) -> None:
         config = load_config()
         panes = tab_panes(tab_id)
         fingerprint, commands = metadata(panes)
+        rename_config = config.get("rename", {})
+        fingerprint += (
+            f"\nmax_title_chars={rename_config.get('max_title_chars')!r}"
+            f"\nmax_title_words={rename_config.get('max_title_words')!r}"
+        )
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
         if not force and cached and cached["digest"] == digest:
             title = cached["title"]
@@ -241,7 +265,7 @@ def rename(force: bool) -> None:
             title = generate_title(pane_content(panes, line_count), config)
             if prefix := app_prefix(panes, commands):
                 title = f"{prefix}:{title.removeprefix(prefix + ':').removeprefix(prefix + '-')}"
-        title = normalize(title.replace(":", "-"))
+        title = trim_title(normalize(title.replace(":", "-")), rename_config.get("max_title_chars"))
         save_cache(tab_id, {"digest": digest, "title": title})
         herdr("tab", "rename", tab_id, title)
 

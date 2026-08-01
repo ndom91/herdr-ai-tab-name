@@ -30,6 +30,38 @@ class RenameTabTests(unittest.TestCase):
     def test_normalizes_spaces_and_punctuation(self):
         self.assertEqual(rename_tab.normalize('"Auth refactor: OAuth!"'), "auth-refactor-oauth")
 
+    def test_adds_title_limits_to_prompt(self):
+        prompt = rename_tab.title_prompt({"rename": {"max_title_chars": 24, "max_title_words": 3}})
+        self.assertIn("at most 24 characters", prompt)
+        self.assertIn("at most 3 words", prompt)
+        self.assertIn("refactor-react-effect is 3 words", prompt)
+
+    def test_trims_title_to_configured_character_limit(self):
+        self.assertEqual(rename_tab.trim_title("refactor-react-effect", 9), "refactor")
+
+    def test_leaves_title_untrimmed_without_character_limit(self):
+        self.assertEqual(rename_tab.trim_title("refactor-react-effect", None), "refactor-react-effect")
+
+    def test_title_limit_change_invalidates_cached_title(self):
+        with tempfile.TemporaryDirectory() as state_dir:
+            with patch.dict(os.environ, {"HERDR_PLUGIN_STATE_DIR": state_dir}, clear=False):
+                path = rename_tab.cache_path("w1:t1")
+                path.parent.mkdir()
+                previous_fingerprint = "metadata\nmax_title_chars=None\nmax_title_words=None"
+                previous_digest = rename_tab.hashlib.sha256(previous_fingerprint.encode()).hexdigest()[:16]
+                path.write_text(f'{{"digest": "{previous_digest}", "title": "existing-title"}}')
+                with (
+                    patch.object(rename_tab, "target_tab_id", return_value="w1:t1"),
+                    patch.object(rename_tab, "load_config", return_value={"rename": {"max_title_words": 2}}),
+                    patch.object(rename_tab, "tab_panes", return_value=[{"cwd": "/repo"}]),
+                    patch.object(rename_tab, "metadata", return_value=("metadata", ["claude"])),
+                    patch.object(rename_tab, "pane_content", return_value="pane output"),
+                    patch.object(rename_tab, "generate_title", return_value="new-title") as generate_title,
+                    patch.object(rename_tab, "herdr"),
+                ):
+                    rename_tab.rename(False)
+                generate_title.assert_called_once()
+
     def test_corrupt_cache_is_a_cache_miss(self):
         previous_state_dir = os.environ.get("HERDR_PLUGIN_STATE_DIR")
         with tempfile.TemporaryDirectory() as state_dir:

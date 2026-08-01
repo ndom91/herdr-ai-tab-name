@@ -26,6 +26,22 @@ Set `llm.url`, `llm.model`, and `llm.ssl_verify` (optional) in `config.toml`. Se
 
 You can commit `config.toml` to dotfiles. Keep `secrets.toml` out of version control. The plugin rejects an API key in `config.toml`.
 
+## Configuration
+
+```toml
+[llm]
+url = "https://llama-dash.puff.lan/v1/chat/completions" # Chat-completions endpoint.
+model = "gemma-4-26B-A4B-it"                            # Model to use.
+# ssl_verify = "/path/to/custom-ca.pem"                  # Optional custom CA.
+
+[rename]
+max_lines_per_pane = 40                                  # Context lines per pane.
+# max_title_chars = 32                                    # Optional: prompt limit and final trim.
+# max_title_words = 3                                     # Optional: prompt suggestion only.
+```
+
+Hyphen-separated title parts count as words: `refactor-react-effect` is three words.
+
 ## Refresh action
 
 The plugin exposes `ndomino.ai-tab-name.refresh`, which ignores the cache for the active tab. Bind it in `~/.config/herdr/config.toml`:
