@@ -31,7 +31,7 @@ You can commit `config.toml` to dotfiles. Keep `secrets.toml` out of version con
 ```toml
 # config.toml
 [llm]
-url = "https://10.0.1.34"                             # Any OpenAI-compatible Chat Completions endpoint.
+url = "http://10.0.1.34/v1/chat/completions"          # Any OpenAI-compatible Chat Completions endpoint.
 model = "gemma4-26B-it"                               # Model to use.
 # url = "https://api.openai.com/v1/chat/completions"
 # model = "gpt-5.4-mini"
