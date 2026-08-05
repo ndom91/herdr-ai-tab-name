@@ -29,9 +29,10 @@ You can commit `config.toml` to dotfiles. Keep `secrets.toml` out of version con
 ## Configuration
 
 ```toml
+# config.toml
 [llm]
-url = "https://llama-dash.puff.lan/v1/chat/completions" # Chat-completions endpoint.
-model = "gemma-4-26B-A4B-it"                            # Model to use.
+url = "https://api.openai.com/v1/chat/completions" # Any OpenAI-compatible Chat Completions endpoint.
+model = "gpt-4.1-mini"                              # Model to use.
 # ssl_verify = "/path/to/custom-ca.pem"                  # Optional custom CA.
 
 [rename]
@@ -39,6 +40,15 @@ max_lines_per_pane = 40                                  # Context lines per pan
 # max_title_chars = 32                                    # Optional: prompt limit and final trim.
 # max_title_words = 3                                     # Optional: prompt suggestion only.
 ```
+
+Set the API key in `secrets.toml`, not `config.toml`:
+
+```toml
+[llm]
+api_key = "your-api-key"
+```
+
+Any provider exposing an OpenAI-compatible Chat Completions API can be used by setting its full endpoint URL and model name. Native Anthropic Messages endpoints are not supported.
 
 Hyphen-separated title parts count as words: `refactor-react-effect` is three words.
 
