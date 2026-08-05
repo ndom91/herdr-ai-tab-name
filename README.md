@@ -31,14 +31,16 @@ You can commit `config.toml` to dotfiles. Keep `secrets.toml` out of version con
 ```toml
 # config.toml
 [llm]
-url = "https://api.openai.com/v1/chat/completions" # Any OpenAI-compatible Chat Completions endpoint.
-model = "gpt-4.1-mini"                              # Model to use.
-# ssl_verify = "/path/to/custom-ca.pem"                  # Optional custom CA.
+url = "https://10.0.1.34"                             # Any OpenAI-compatible Chat Completions endpoint.
+model = "gemma4-26B-it"                               # Model to use.
+# url = "https://api.openai.com/v1/chat/completions"
+# model = "gpt-5.4-mini"
+# ssl_verify = "/path/to/custom-ca.pem"               # Optional custom CA.
 
 [rename]
-max_lines_per_pane = 40                                  # Context lines per pane.
-# max_title_chars = 32                                    # Optional: prompt limit and final trim.
-# max_title_words = 3                                     # Optional: prompt suggestion only.
+max_lines_per_pane = 40                               # Context lines per pane.
+# max_title_chars = 32                                # Optional: prompt limit and final trim.
+# max_title_words = 3                                 # Optional: prompt suggestion only.
 ```
 
 Set the API key in `secrets.toml`, not `config.toml`:
