@@ -1,12 +1,14 @@
 # herdr-ai-tab-name
 
-Automatically rename Herdr tabs with short dash-case names from pane context using any local LLM. This is a rewrite of my tmux variant of this same plugin - [`tmux-ai-window-name`](https://github.com/ndom91/tmux-ai-window-name).
+Automatically rename Herdr tabs and agents with short dash-case names from pane context using any local LLM. This is a rewrite of my tmux variant of this same plugin - [`tmux-ai-window-name`](https://github.com/ndom91/tmux-ai-window-name).
 
 ![](.github/screenshot_001.png)
 
 ## What it does
 
 - Runs name generation when a tab receives focus, or when manually triggered.
+- Generates and applies a separate name for every agent in the focused tab, using only that agent's pane context.
+- Publishes each agent title as pane metadata for sidebar integrations such as herdr-radar.
 - Caches by foreground command, working directory, and Git branch. Revisiting an unchanged tab makes no LLM call.
 - Uses the directory name when every pane is an idle shell.
 - Reads recent pane output only on a cache miss.

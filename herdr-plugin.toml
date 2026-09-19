@@ -1,8 +1,8 @@
 id = "ndomino.ai-tab-name"
-name = "AI Tab Name"
+name = "AI Tab & Agent Name"
 version = "0.1.0"
 min_herdr_version = "0.7.5"
-description = "Rename focused Herdr tabs from pane context using a local LLM."
+description = "Rename focused Herdr tabs and agents from pane context using a local LLM."
 platforms = ["macos", "linux"]
 
 [[events]]

@@ -24,6 +24,55 @@ class RenameTabTests(unittest.TestCase):
         panes = [{"cwd": "/opt/plain/services"}]
         self.assertIsNone(rename_tab.plain_shell_title(panes, ["claude"]))
 
+    def test_renames_each_agent_from_its_own_pane(self):
+        panes = [
+            {"pane_id": "w1:p1", "agent": "claude", "cwd": "/repo/one"},
+            {"pane_id": "w1:p2", "cwd": "/repo/two"},
+            {"pane_id": "w1:p3", "agent": "opencode", "cwd": "/repo/three"},
+        ]
+        with (
+            patch.object(rename_tab, "git_branch", return_value="main"),
+            patch.object(rename_tab, "pane_content", side_effect=["one output", "three output"]),
+            patch.object(rename_tab, "generate_title", side_effect=["first title", "second title"]),
+            patch.object(rename_tab, "herdr") as herdr,
+            patch.object(rename_tab, "herdr_write") as herdr_write,
+        ):
+            changed = rename_tab.rename_agents(panes, ["claude", "zsh", "opencode"], {"rename": {}}, {})
+        self.assertTrue(changed)
+        self.assertEqual(
+            herdr.call_args_list,
+            [
+                (("agent", "rename", "w1:p1", "first-title"),),
+                (("agent", "rename", "w1:p3", "second-title"),),
+            ],
+        )
+        self.assertEqual(
+            herdr_write.call_args_list,
+            [
+                (("pane", "report-metadata", "w1:p1", "--source", "plugin:ndomino.ai-tab-name", "--title", "first-title"),),
+                (("pane", "report-metadata", "w1:p3", "--source", "plugin:ndomino.ai-tab-name", "--title", "second-title"),),
+            ],
+        )
+
+    def test_uses_cached_agent_title(self):
+        pane = {"pane_id": "w1:p1", "agent": "claude", "cwd": "/repo"}
+        with (
+            patch.object(rename_tab, "git_branch", return_value="main"),
+            patch.object(rename_tab, "generate_title") as generate_title,
+            patch.object(rename_tab, "herdr") as herdr,
+            patch.object(rename_tab, "herdr_write") as herdr_write,
+        ):
+            digest = rename_tab.agent_digest(pane, "claude", {})
+            changed = rename_tab.rename_agents(
+                [pane], ["claude"], {"rename": {}}, {"agents": {"w1:p1": {"digest": digest, "title": "cached-title"}}}
+            )
+        self.assertFalse(changed)
+        generate_title.assert_not_called()
+        herdr.assert_called_once_with("agent", "rename", "w1:p1", "cached-title")
+        herdr_write.assert_called_once_with(
+            "pane", "report-metadata", "w1:p1", "--source", "plugin:ndomino.ai-tab-name", "--title", "cached-title"
+        )
+
     def test_normalizes_model_output(self):
         self.assertEqual(rename_tab.normalize("Auth-Refactor-OAuth"), "auth-refactor-oauth")
 

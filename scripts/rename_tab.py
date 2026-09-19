@@ -18,6 +18,7 @@ from pathlib import Path
 
 SHELLS = {"bash", "fish", "sh", "zsh"}
 PREFIX_APPS = {"claude", "codex", "nvim", "opencode", "vim"}
+METADATA_SOURCE = "plugin:ndomino.ai-tab-name"
 DEFAULT_PROMPT = """You are naming a terminal tab based on its terminal content.
 Return only a concise 2-3 word kebab-case title. Prefer the current Git branch's
 task intent. If it is main or master, describe the project and current work."""
@@ -43,6 +44,15 @@ def herdr_text(*args: str) -> str:
         capture_output=True,
         text=True,
     ).stdout
+
+
+def herdr_write(*args: str) -> None:
+    subprocess.run(
+        [os.environ.get("HERDR_BIN_PATH", "herdr"), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def load_config() -> dict:
@@ -145,6 +155,38 @@ def app_prefix(panes: list[dict], commands: list[str]) -> str:
             if agent in PREFIX_APPS:
                 return agent
     return ""
+
+
+def agent_digest(pane: dict, command: str, rename_config: dict) -> str:
+    cwd = pane.get("foreground_cwd") or pane["cwd"]
+    fingerprint = (
+        f"{command}:{cwd}:{git_branch(cwd)}"
+        f"\nmax_title_chars={rename_config.get('max_title_chars')!r}"
+        f"\nmax_title_words={rename_config.get('max_title_words')!r}"
+    )
+    return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
+
+
+def rename_agents(panes: list[dict], commands: list[str], config: dict, cached: dict, force: bool = False) -> bool:
+    rename_config = config.get("rename", {})
+    agents = cached.setdefault("agents", {})
+    changed = False
+    for pane, command in zip(panes, commands, strict=True):
+        if not pane.get("agent"):
+            continue
+        digest = agent_digest(pane, command, rename_config)
+        agent_cache = agents.get(pane["pane_id"], {})
+        if not force and agent_cache.get("digest") == digest:
+            title = agent_cache["title"]
+        else:
+            line_count = rename_config.get("max_lines_per_pane", 40)
+            title = generate_title(pane_content([pane], line_count), config)
+            title = trim_title(normalize(title.replace(":", "-")), rename_config.get("max_title_chars"))
+            agents[pane["pane_id"]] = {"digest": digest, "title": title}
+            changed = True
+        herdr("agent", "rename", pane["pane_id"], title)
+        herdr_write("pane", "report-metadata", pane["pane_id"], "--source", METADATA_SOURCE, "--title", title)
+    return changed
 
 
 def pane_content(panes: list[dict], line_count: int) -> str:
@@ -255,9 +297,11 @@ def rename(force: bool) -> None:
             f"\nmax_title_words={rename_config.get('max_title_words')!r}"
         )
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
-        if not force and cached and cached["digest"] == digest:
+        if not force and cached.get("digest") == digest:
             title = cached["title"]
             herdr("tab", "rename", tab_id, title)
+            if rename_agents(panes, commands, config, cached):
+                save_cache(tab_id, cached)
             return
         title = plain_shell_title(panes, commands)
         if title is None:
@@ -266,7 +310,9 @@ def rename(force: bool) -> None:
             if prefix := app_prefix(panes, commands):
                 title = f"{prefix}:{title.removeprefix(prefix + ':').removeprefix(prefix + '-')}"
         title = trim_title(normalize(title.replace(":", "-")), rename_config.get("max_title_chars"))
-        save_cache(tab_id, {"digest": digest, "title": title})
+        cached.update({"digest": digest, "title": title})
+        rename_agents(panes, commands, config, cached, force)
+        save_cache(tab_id, cached)
         herdr("tab", "rename", tab_id, title)
 
 
