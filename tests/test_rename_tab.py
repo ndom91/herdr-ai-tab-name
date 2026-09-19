@@ -55,7 +55,12 @@ class RenameTabTests(unittest.TestCase):
         )
 
     def test_uses_cached_agent_title(self):
-        pane = {"pane_id": "w1:p1", "agent": "claude", "cwd": "/repo"}
+        pane = {
+            "pane_id": "w1:p1",
+            "agent": "claude",
+            "agent_session": {"value": "session-one"},
+            "cwd": "/repo",
+        }
         with (
             patch.object(rename_tab, "git_branch", return_value="main"),
             patch.object(rename_tab, "generate_title") as generate_title,
@@ -72,6 +77,16 @@ class RenameTabTests(unittest.TestCase):
         herdr_write.assert_called_once_with(
             "pane", "report-metadata", "w1:p1", "--source", "plugin:ndomino.ai-tab-name", "--title", "cached-title"
         )
+
+    def test_agent_session_and_context_limit_invalidate_cache(self):
+        pane = {"pane_id": "w1:p1", "agent": "claude", "agent_session": {"value": "session-one"}, "cwd": "/repo"}
+        with patch.object(rename_tab, "git_branch", return_value="main"):
+            first_digest = rename_tab.agent_digest(pane, "claude", {"max_lines_per_pane": 40})
+            pane["agent_session"] = {"value": "session-two"}
+            second_digest = rename_tab.agent_digest(pane, "claude", {"max_lines_per_pane": 40})
+            longer_context_digest = rename_tab.agent_digest(pane, "claude", {"max_lines_per_pane": 80})
+        self.assertNotEqual(first_digest, second_digest)
+        self.assertNotEqual(second_digest, longer_context_digest)
 
     def test_normalizes_model_output(self):
         self.assertEqual(rename_tab.normalize("Auth-Refactor-OAuth"), "auth-refactor-oauth")

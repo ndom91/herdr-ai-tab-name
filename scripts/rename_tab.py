@@ -157,13 +157,19 @@ def app_prefix(panes: list[dict], commands: list[str]) -> str:
     return ""
 
 
-def agent_digest(pane: dict, command: str, rename_config: dict) -> str:
-    cwd = pane.get("foreground_cwd") or pane["cwd"]
-    fingerprint = (
-        f"{command}:{cwd}:{git_branch(cwd)}"
+def title_settings_fingerprint(rename_config: dict) -> str:
+    return (
         f"\nmax_title_chars={rename_config.get('max_title_chars')!r}"
         f"\nmax_title_words={rename_config.get('max_title_words')!r}"
+        f"\nmax_lines_per_pane={rename_config.get('max_lines_per_pane', 40)!r}"
     )
+
+
+def agent_digest(pane: dict, command: str, rename_config: dict) -> str:
+    cwd = pane.get("foreground_cwd") or pane["cwd"]
+    session = pane.get("agent_session", {})
+    session_id = session.get("value", "") if isinstance(session, dict) else ""
+    fingerprint = f"{command}:{cwd}:{git_branch(cwd)}:{session_id}" + title_settings_fingerprint(rename_config)
     return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
 
 
@@ -292,10 +298,7 @@ def rename(force: bool) -> None:
         panes = tab_panes(tab_id)
         fingerprint, commands = metadata(panes)
         rename_config = config.get("rename", {})
-        fingerprint += (
-            f"\nmax_title_chars={rename_config.get('max_title_chars')!r}"
-            f"\nmax_title_words={rename_config.get('max_title_words')!r}"
-        )
+        fingerprint += title_settings_fingerprint(rename_config)
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
         if not force and cached.get("digest") == digest:
             title = cached["title"]
